@@ -1,7 +1,15 @@
 import sys
+
 from PySide2.QtCore import *
 from PySide2.QtGui import *
 from PySide2.QtWidgets import *
+
+import gettext
+gt = gettext.translation('kuota',localedir='locale')
+#,languages=['en','es','ca'])
+gt.install()
+_ = gt.gettext
+
 
 class ImageListWidget(QListWidget):
     def __init__(self, parent=None):
@@ -20,9 +28,9 @@ class ImageListWidget(QListWidget):
         self.setSpacing(10)
 
         # Add some example items
-        self.addItem(QListWidgetItem(QIcon('drive-harddisk.png'), 'Description of image 1'))
-        self.addItem(QListWidgetItem(QIcon('drive-harddisk.png'), 'Description of image 2'))
-        self.addItem(QListWidgetItem(QIcon('drive-harddisk.png'), 'Description of image 3'))
+        self.addItem(QListWidgetItem(QIcon('drive-harddisk.png'), _('Description 1')))
+        self.addItem(QListWidgetItem(QIcon('drive-harddisk.png'), _('Description 2')))
+        self.addItem(QListWidgetItem(QIcon('drive-harddisk.png'), _('Description 3')))
 
         # Connect signal to list items
         self.itemClicked.connect(self.item_clicked)
@@ -63,6 +71,9 @@ class MainWindow(QMainWindow):
 
         self.resize(1024,768)
         
+        menu_bar = self.menuBar()
+        file_menu = menu_bar.addMenu(_('File'))
+
         stack = QStackedWidget(self)
         
         # Create a scroll area to contain the image list widget
