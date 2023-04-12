@@ -10,6 +10,7 @@ gt = gettext.translation('kuota',localedir='locale')
 gt.install()
 _ = gt.gettext
 
+import signal
 
 class ImageListWidget(QListWidget):
     def __init__(self, parent=None):
@@ -64,20 +65,14 @@ class ImageListWidget(QListWidget):
         timer = QTimer().singleShot(duration*2,lambda : (print(stack.currentIndex()),current.move(0,0),stack.setCurrentIndex(idx),print('done')))
 
 
-
-class MainWindow(QMainWindow):
+class MainContent(QWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
-
-        self.resize(1024,768)
-        
-        menu_bar = self.menuBar()
-        file_menu = menu_bar.addMenu(_('File'))
 
         stack = QStackedWidget(self)
         
         # Create a scroll area to contain the image list widget
-        scroll_area = QScrollArea()
+        scroll_area = QScrollArea(self)
         scroll_area.setWidgetResizable(True)
 
         # Create the image list widget and set it as the widget for the scroll area
@@ -85,15 +80,41 @@ class MainWindow(QMainWindow):
         scroll_area.setWidget(image_list_widget)
 
         stack.addWidget(scroll_area)
+
+        # Add a example button
+        button = QPushButton(_('New action'),self)
+        button.clicked.connect(lambda : print('Button pressed'))
+
         layout = QVBoxLayout(self)
         layout.addWidget(stack)
-        #scroll_area.setStyleSheet("background-color: #F5F5F5;")
-        # Set the scroll area as the central widget for the main window
-        self.setCentralWidget(stack)
-        #self.setLayout(layout)
+        layout.addWidget(button)
+        
+        self.setLayout(layout)
+        
+
+class MainWindow(QMainWindow):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+
+        self.resize(1024,768)
+        
+        content = MainContent()
+
+        menu_bar = self.menuBar()
+        file_menu = menu_bar.addMenu(_('File'))
+
+        exit_action = QAction(_('Exit'),self)
+        exit_action.triggered.connect(self.close)
+        file_menu.addAction(exit_action)
+
+        # Set the central widget for the main window
+        self.setCentralWidget(content)
 
 if __name__ == '__main__':
+    signal.signal(signal.SIGINT, signal.SIG_DFL)
     app = QApplication(sys.argv)
+    app.setWindowIcon(QIcon('kuota.svg'))
     window = MainWindow()
+    window.setWindowTitle('Kuota')
     window.show()
     sys.exit(app.exec_())
