@@ -37,6 +37,8 @@ class ImageListWidget(QListWidget):
         self.itemClicked.connect(self.item_clicked)
 
         self.setSizePolicy(QSizePolicy.Expanding,QSizePolicy.Expanding)
+
+        self.setStyleSheet("QListWidget { border: none; background-color: transparent; }")
         
     def item_clicked(self, item):
         print(item.text())
@@ -62,7 +64,7 @@ class ImageListWidget(QListWidget):
         a_group.finished.connect(lambda : print('ended'))
         a_group.start(QAbstractAnimation.KeepWhenStopped)
 
-        timer = QTimer().singleShot(duration*2,lambda : (print(stack.currentIndex()),current.move(0,0),stack.setCurrentIndex(idx),print('done')))
+        timer = QTimer().singleShot(duration*5,lambda : (print(stack.currentIndex()),current.move(0,0),stack.setCurrentIndex(idx),print('done')))
 
 
 class MainContent(QWidget):
@@ -79,6 +81,8 @@ class MainContent(QWidget):
         image_list_widget = ImageListWidget()
         scroll_area.setWidget(image_list_widget)
 
+        scroll_area.setStyleSheet("QScrollArea { border: none; background-color: transparent; }")
+
         stack.addWidget(scroll_area)
 
         # Add a example button
@@ -91,6 +95,15 @@ class MainContent(QWidget):
         
         self.setLayout(layout)
         
+        # Creación de la tabla de valores
+        tabla_widget = QTableWidget(5, 5)
+        tabla_widget.setHorizontalHeaderLabels(["Columna 1", "Columna 2", "Columna 3", "Columna 4", "Columna 5"])
+        for i in range(5):
+            for j in range(5):
+                item_widget = QTableWidgetItem(f"Valor {i},{j}")
+                tabla_widget.setItem(i, j, item_widget)
+        tabla_widget.setSortingEnabled(True)
+        stack.addWidget(tabla_widget)
 
 class MainWindow(QMainWindow):
     def __init__(self, parent=None):
@@ -100,15 +113,54 @@ class MainWindow(QMainWindow):
         
         content = MainContent()
 
-        menu_bar = self.menuBar()
-        file_menu = menu_bar.addMenu(_('File'))
+        self.add_action(type='toolbar',text=_('Users'),data='users')
+        self.add_action(type='toolbar',text=_('Groups'),data='groups')
+        self.add_action(type='toolbar',text=_('Exit'),data='exit')
+        self.add_action(type='menu',text=_('Exit'),data='exit')
 
-        exit_action = QAction(_('Exit'),self)
-        exit_action.triggered.connect(self.close)
-        file_menu.addAction(exit_action)
+        self.create_menu_bar()
+        self.create_actions_toolbar()
 
         # Set the central widget for the main window
         self.setCentralWidget(content)
+
+    def add_action(self,type='toolbar',icon='drive-harddisk.png',text='action',data='action'):
+        if type not in ['toolbar','menu']:
+            return None
+        
+        if not hasattr(self,'_actions'):
+            self._actions = {}
+        self._actions.setdefault(type,[])
+        
+        action = QAction(QIcon(icon),_(text),self)
+        action.setData(data)
+
+        self._actions[type].append(action)
+
+    def create_menu_bar(self):
+        menu_bar = self.menuBar()
+        file_menu = menu_bar.addMenu(_('File'))
+        
+        for a in self._actions['menu']:
+            a.triggered.connect(self.action_pressed)
+            file_menu.addAction(a)
+
+    def create_actions_toolbar(self):
+        toolbar = self.addToolBar(_('Toolbar'))
+        toolbar.setToolButtonStyle(Qt.ToolButtonTextBesideIcon)
+        toolbar.setMovable(False)
+        # toolbar.setStyleSheet("QToolBar { border: none; background-color: transparent; }")
+
+        for a in self._actions['toolbar']:
+            a.triggered.connect(self.action_pressed)
+            toolbar.addAction(a)
+
+    def action_pressed(self):
+        sender = self.sender()
+        data = sender.data()
+        print(f'{data} pressed')
+        if data == 'exit':
+            self.close()
 
 if __name__ == '__main__':
     signal.signal(signal.SIGINT, signal.SIG_DFL)
