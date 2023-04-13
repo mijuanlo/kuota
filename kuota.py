@@ -33,7 +33,7 @@ class ImageListWidget(QListWidget):
         for i in range(5):
             text = _('Description')+f' {i}'
             item = QListWidgetItem(QIcon('drive-harddisk.png'), ' '*10+text)
-            item.setData(Qt.UserRole,text)
+            item.setData(Qt.UserRole,{'text':text,'status':False})
             item.setFlags(item.flags() & ~Qt.ItemIsSelectable)
             font = QFont()
             font.setPixelSize(14)
@@ -55,7 +55,14 @@ class ImageListWidget(QListWidget):
             """)
         
     def item_clicked(self, item):
-        print(f'{item.data(Qt.UserRole)} clicked')
+        data = item.data(Qt.UserRole)
+        print(f"{data.get('text')} clicked")
+        if data.get('status'):
+            item.setIcon(QIcon('drive-harddisk.png'))
+        else:
+            item.setIcon(QIcon('drive-harddisk-ok.png'))
+        data['status']= not data['status']
+        item.setData(Qt.UserRole,data)
         scroll = self.parent()
         stack = scroll.parent()
         while not isinstance(scroll, QScrollArea):
