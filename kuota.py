@@ -3,6 +3,7 @@ import sys
 from PySide2.QtCore import *
 from PySide2.QtGui import *
 from PySide2.QtWidgets import *
+from PySide2.QtCore import Qt
 
 import gettext
 gt = gettext.translation('kuota',localedir='locale')
@@ -29,24 +30,40 @@ class ImageListWidget(QListWidget):
         self.setSpacing(10)
 
         # Add some example items
-        self.addItem(QListWidgetItem(QIcon('drive-harddisk.png'), _('Description 1')))
-        self.addItem(QListWidgetItem(QIcon('drive-harddisk.png'), _('Description 2')))
-        self.addItem(QListWidgetItem(QIcon('drive-harddisk.png'), _('Description 3')))
+        for i in range(5):
+            text = _('Description')+f' {i}'
+            item = QListWidgetItem(QIcon('drive-harddisk.png'), ' '*10+text)
+            item.setData(Qt.UserRole,text)
+            item.setFlags(item.flags() & ~Qt.ItemIsSelectable)
+            font = QFont()
+            font.setPixelSize(14)
+            item.setFont(font)
+            self.addItem(item)
 
         # Connect signal to list items
         self.itemClicked.connect(self.item_clicked)
 
         self.setSizePolicy(QSizePolicy.Expanding,QSizePolicy.Expanding)
+        
 
-        self.setStyleSheet("QListWidget { border: none; background-color: transparent; }")
+        color = 'transparent'
+        # color = 'grey'
+        self.setStyleSheet(
+            f""" 
+            QListWidget {{ border: none; background-color: {color}; padding: 0% 0%; margin-left: 20%;}} 
+            QListWidget::item:hover {{ border: none; background-color: {color}; margin-left: 30%;}} 
+            """)
         
     def item_clicked(self, item):
-        print(item.text())
-        scroll = self.parent().parent()
+        print(f'{item.data(Qt.UserRole)} clicked')
+        scroll = self.parent()
         stack = scroll.parent()
-        duration = 500
+        while not isinstance(scroll, QScrollArea):
+            scroll = scroll.parent()
+        while not isinstance(stack, QStackedWidget):
+            stack = stack.parent()
+        duration = 800
         idx = stack.currentIndex()
-        print(idx)
         next_idx = (idx+1) % stack.count()
         current = stack.currentWidget()
         next_widget = stack.widget(next_idx)
@@ -57,15 +74,41 @@ class ImageListWidget(QListWidget):
         a1.setEndValue(QPoint(-scroll.width(),0))
         a1.setEasingCurve(QEasingCurve.OutQuad)
 
-        a_group = QSequentialAnimationGroup(self)
+        a2 = QPropertyAnimation(next_widget, b'pos')
+        a2.setDuration(duration)
+        a2.setStartValue(QPoint(scroll.width(),0))
+        a2.setEndValue(QPoint(0,0))
+        a2.setEasingCurve(QEasingCurve.OutQuad)
+
+        a_group = QParallelAnimationGroup(self)
         a_group.addAnimation(a1)
+        a_group.addAnimation(a2)
 
         a1.finished.connect(lambda : stack.setCurrentIndex(next_idx))
-        a_group.finished.connect(lambda : print('ended'))
-        a_group.start(QAbstractAnimation.KeepWhenStopped)
+        a_group.finished.connect(lambda : print('Animation ended'))
+        a_group.start(QAbstractAnimation.DeleteWhenStopped)
 
-        timer = QTimer().singleShot(duration*5,lambda : (print(stack.currentIndex()),current.move(0,0),stack.setCurrentIndex(idx),print('done')))
+        timer = QTimer().singleShot(duration*10,lambda : (current.move(0,0),stack.setCurrentIndex(idx)))
 
+class DriveView(QWidget):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        layout = QVBoxLayout()
+        lbl = QTextEdit(_('Detected filesystems:'))
+        lbl.setReadOnly(True)
+        lbl.setAlignment(Qt.AlignCenter)
+        lbl.setStyleSheet("background-color: transparent; border: none; padding: 0px;")
+        lbl.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        lbl.setMaximumHeight(lbl.document().size().height())
+        lbl.setMinimumHeight(lbl.document().size().height())
+        font = QFont()
+        font.setPointSize(16)
+        lbl.setFont(font)
+        l = ImageListWidget()
+        layout.addWidget(lbl)
+        #layout.addSpacerItem(QSpacerItem(0,10))
+        layout.addWidget(l)
+        self.setLayout(layout)
 
 class MainContent(QWidget):
     def __init__(self, parent=None):
@@ -78,11 +121,11 @@ class MainContent(QWidget):
         scroll_area.setWidgetResizable(True)
 
         # Create the image list widget and set it as the widget for the scroll area
-        image_list_widget = ImageListWidget()
-        scroll_area.setWidget(image_list_widget)
+        #image_list_widget = ImageListWidget()
+        drive_view = DriveView(self)
+        scroll_area.setWidget(drive_view)
 
-        scroll_area.setStyleSheet("QScrollArea { border: none; background-color: transparent; }")
-
+        scroll_area.setStyleSheet("QScrollArea { border: none; background-color: transparent; height: 300%; }")
         stack.addWidget(scroll_area)
 
         # Add a example button
